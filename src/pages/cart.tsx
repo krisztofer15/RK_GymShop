@@ -31,6 +31,7 @@ export default function Cart() {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [recommendedItems, setRecommendedItems] = useState<RecommendedProduct[]>([]);
     const [promoCode, setPromoCode] = useState("");
+    const [discount, setDiscount] = useState(0);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
@@ -102,6 +103,7 @@ export default function Cart() {
 
     const handleAddToCart = async (product: RecommendedProduct) => {
         try {
+
             const existingItem = cartItems.find((item) => item.product.id === product.id);
 
             if (existingItem) {
@@ -128,6 +130,9 @@ export default function Cart() {
                     ]);
                 }
             }
+
+            localStorage.setItem("cart", JSON.stringify(cartItems));
+
         } catch (err) {
             console.error("Unexpected error:", err);
         }
@@ -173,6 +178,36 @@ export default function Cart() {
 
     const calculateTotal = () => {
         return cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0);
+    };
+
+    const applyPromoCode = async () => {
+        const total = calculateTotal();
+        const { data: userData } = await supabase.auth.getUser();
+
+        if (!userData?.user) {
+            alert("You must be logged in to apply a promo code.");
+            return;
+        }
+
+        const response = await fetch("/api/promos/apply", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                promo_code: promoCode,
+                user_id: userData.user.id,
+                cart_total: total,
+            }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            setDiscount(result.discount);
+        } else {
+            alert(result.message);
+        }
     };
 
     return (
@@ -228,7 +263,7 @@ export default function Cart() {
                         <div className="bg-white shadow rounded-lg p-6 space-y-6">
                             <div className="flex justify-between">
                                 <span className="text-sm font-semibold text-gray-700">Subtotal</span>
-                                <span className="text-lg font-bold text-gray-900">${calculateTotal().toFixed(2)}</span>
+                                <span className="text-lg font-bold text-gray-900">${(calculateTotal() - discount).toFixed(2)}</span>
                             </div>
 
                             <div>
@@ -242,7 +277,9 @@ export default function Cart() {
                                 />
                             </div>
 
-                            <button className="w-full py-3 bg-[#FF6000] text-white text-sm rounded-lg hover:bg-[#FFA559] transition">
+                            <button
+                                onClick={applyPromoCode}
+                                className="w-full py-3 bg-[#FF6000] text-white text-sm rounded-lg hover:bg-[#FFA559] transition">
                                 Proceed to Checkout
                             </button>
                         </div>

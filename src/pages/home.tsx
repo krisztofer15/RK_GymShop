@@ -113,8 +113,6 @@ export default function Home() {
         }
     };
 
-
-
     const handleCategoryClick = (categoryId: string | null) => {
         setSelectedCategory(categoryId);
     };
