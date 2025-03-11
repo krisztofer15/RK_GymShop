@@ -46,19 +46,20 @@ export default function Cart() {
             return;
         }
         
-        const { data, error }: SupabaseResponse<CartItem[]> = await supabase
+        const { data, error } = await supabase
             .from("cart_items")
             .select(`
                 id,
                 quantity,
                 product:products (id, name, price, description)
-            `);
+            `)
+            .eq("user_id", userData.user.id);
 
         if (error) {
             console.error("Error fetching cart items:", error);
         } else if (data) {
             // Csoportosítjuk a termékeket az `product.id` alapján
-            const groupedItems = data.reduce((acc, item) => {
+            const groupedItems = data.reduce((acc, item: any) => {
                 const existingItem = acc.find((i) => i.product.id === item.product.id);
                 if (existingItem) {
                     existingItem.quantity += item.quantity;
