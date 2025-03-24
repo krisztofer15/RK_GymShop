@@ -113,8 +113,6 @@ export default function Home() {
         }
     };
 
-
-
     const handleCategoryClick = (categoryId: string | null) => {
         setSelectedCategory(categoryId);
     };
@@ -205,8 +203,7 @@ export default function Home() {
             </nav>
 
             {/* Ide irjuk ki hogy rendelkezik egy WELCOME10 kuponnal, amit egyszer használhat fel */}
-
-
+            
             {/* Kategóriasáv */}
             <div className="flex overflow-x-auto justify-center space-x-4 mt-6 px-4 py-2 rounded-lg">
                 <div
@@ -259,7 +256,7 @@ export default function Home() {
                                 <p className="text-xs text-gray-500 mb-3 line-clamp-2">{product.description}</p>
                                 <p className="text-xl font-bold text-[#FF6000] mb-1">${product.price.toFixed(2)}</p>
                                 <button
-                                    className="mt-2 bg-[#FF6000] text-white text-sm py-1 px-3 rounded-md hover:bg-[#E85500] transition"
+                                    className="mt-2 bg-[#FF6000] text-white text-sm py-1 px-3 rounded-md hover:bg-[#FFA559] transition"
                                     onClick={() => handleAddToCart(product.id)}
                                 >
                                     Add to Cart

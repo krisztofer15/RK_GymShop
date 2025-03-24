@@ -1,5 +1,3 @@
-// services/cartService.ts
-
 // Termék hozzáadása a kosárhoz
 export async function addToCart(userId: string, productId: string, quantity: number) {
     try {

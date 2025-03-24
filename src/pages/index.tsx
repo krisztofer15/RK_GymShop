@@ -29,6 +29,7 @@ export default function Index() {
 
       if (response.ok) {
         localStorage.removeItem("user");
+        localStorage.removeItem("cart"); //******************* */
         router.push("/login");
       } else {
         console.error("Logout failed");

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Pencil, Check, X, LogOut } from 'lucide-react';
+import { Pencil, Check, X, LogOut, Package, ClipboardList} from 'lucide-react';
 import { motion } from 'framer-motion';
+import { supabase } from '../lib/supabaseClient';
 
 type User = {
     id: string;
@@ -10,8 +11,18 @@ type User = {
     created: string;
 };
 
+type Order = {
+    id: string;
+    subtotal: number;
+    discount: number;
+    final_total: number;
+    status: string;
+    created_at: string;
+};
+
 export default function Profile() {
     const [user, setUser] = useState<User | null>(null);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -19,15 +30,48 @@ export default function Profile() {
     const router = useRouter();
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            const parsedUser: User = JSON.parse(storedUser);
-            console.log('User object:', parsedUser);
-            setUser(parsedUser);
-            setName(parsedUser.name);
-            setEmail(parsedUser.email);
-        }
-    }, []);
+        const fetchUserAndOrders = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+      
+            if (!user) {
+              router.push("/login");
+              return;
+            }
+
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                setUser(parsed);
+                setName(parsed.name);
+                setEmail(parsed.email);
+              } else {
+                // Set user data
+            setUser({
+                id: user.id,
+                name: user.user_metadata.name ?? "",
+                email: user.email ?? "",
+                created: user.created_at
+              });
+              setName(user.user_metadata.name ?? "");
+              setEmail(user.email ?? "");
+              }
+      
+            // Fetch orders
+            const { data, error } = await supabase
+              .from("orders")
+              .select("id, subtotal, discount, final_total, status, created_at")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false });
+      
+            if (error) {
+              console.error("Hiba a rendelések lekérdezésekor:", error);
+            } else {
+              setOrders(data);
+            }
+          };
+      
+          fetchUserAndOrders();      
+    }, [router]);
 
     const handleUpdateProfile = async () => {
         if (!user) return;
@@ -51,7 +95,6 @@ export default function Profile() {
             setMessage('Profile updated successfully');
             setIsEditing(false);
         } catch (err) {
-            console.error('Error updating profile:', err);
             setMessage('Error updating profile');
         }
     };
@@ -72,126 +115,105 @@ export default function Profile() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen">
-            <motion.div
-                className="max-w-lg w-full bg-white p-8 rounded-2xl shadow-lg"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-            >
-                <h1 className="text-3xl font-extrabold text-[#1D1617] mb-8 text-center">
-                    Your Profile
-                </h1>
+        <div className="flex flex-col md:flex-row items-start justify-center min-h-screen bg-gray-50 p-6 gap-8">
+        {/* Profil kártya */}
+        <motion.div
+            className="w-full md:w-1/3 bg-white shadow rounded-lg p-5"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+        >
+            <h1 className="text-xl font-semibold text-gray-800 flex items-center">
+                <ClipboardList className="mr-2 text-[#FF6000]" size={20} /> Your Profile
+            </h1>
 
-                {/* Profile Info Section */}
-                <div className="space-y-6">
-                    {/* Name */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="flex items-center justify-between"
-                    >
-                        <span className="text-[#454545] font-medium">Name:</span>
-                        {isEditing ? (
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="flex-1 ml-4 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#FF6000] focus:outline-none"
-                            />
-                        ) : (
-                            <span className="text-[#1D1617]">{user.name}</span>
-                        )}
-                    </motion.div>
-
-                    {/* Email */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                        className="flex items-center justify-between"
-                    >
-                        <span className="text-[#454545] font-medium">Email:</span>
-                        {isEditing ? (
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="flex-1 ml-4 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#FF6000] focus:outline-none"
-                            />
-                        ) : (
-                            <span className="text-[#1D1617]">{user.email}</span>
-                        )}
-                    </motion.div>
-
-                    {/* Created Date */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.6 }}
-                        className="flex items-center justify-between"
-                    >
-                        <span className="text-[#454545] font-medium">Created At:</span>
-                        <span className="text-gray-500">
-                            {new Date(user.created).toLocaleDateString()}
-                        </span>
-                    </motion.div>
+            <div className="space-y-3 mt-4">
+                <div>
+                    <label className="text-gray-500 text-sm">Name:</label>
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#FF6000] focus:outline-none"
+                        disabled={!isEditing}
+                    />
                 </div>
 
-                {/* Update & Edit Buttons */}
-                <div className="flex space-x-4 mt-8 justify-center">
-                    {isEditing ? (
-                        <>
-                            <motion.button
-                                onClick={handleUpdateProfile}
-                                className="bg-[#FF6000] text-white py-2 px-6 rounded-lg flex items-center hover:bg-[#FFA559] transition"
-                                whileHover={{ scale: 1.05 }}
-                            >
-                                <Check className="mr-2" size={20} />
-                                Save
-                            </motion.button>
-                            <motion.button
-                                onClick={handleEditToggle}
-                                className="bg-gray-400 text-white py-2 px-6 rounded-lg hover:bg-gray-500 transition"
-                                whileHover={{ scale: 1.05 }}
-                            >
-                                <X className="mr-2" size={20} />
-                                Cancel
-                            </motion.button>
-                        </>
-                    ) : (
-                        <motion.button
-                            onClick={handleEditToggle}
-                            className="bg-[#FF6000] text-white py-2 px-6 rounded-lg flex items-center hover:bg-[#FFA559] transition"
-                            whileHover={{ scale: 1.05 }}
-                        >
-                            <Pencil className="mr-2" size={20} />
-                            Edit
-                        </motion.button>
-                    )}
+                <div>
+                    <label className="text-gray-500 text-sm">Email:</label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#FF6000] focus:outline-none"
+                        disabled={!isEditing}
+                    />
                 </div>
 
-                {/* Logout Button */}
-                <motion.button
-                    onClick={handleLogout}
-                    className="mt-6 bg-red-500 text-white py-2 px-6 rounded-lg flex items-center justify-center hover:bg-red-600 transition mx-auto"
-                    whileHover={{ scale: 1.05 }}
-                >
-                    <LogOut className="mr-2" size={20} />
-                    Logout
-                </motion.button>
+                <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Created At:</span>
+                    <span className="text-gray-600">{new Date(user.created).toLocaleDateString()}</span>
+                </div>
+            </div>
 
-                {message && (
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-green-500 text-center mt-4"
-                    >
-                        {message}
-                    </motion.p>
+            <div className="flex space-x-3 mt-4">
+                {isEditing ? (
+                    <>
+                        <button onClick={handleUpdateProfile} className="flex-1 bg-[#FF6000] text-white py-2 text-sm rounded-lg flex items-center justify-center hover:bg-[#FFA559]">
+                            <Check size={16} className="mr-1" /> Save
+                        </button>
+                        <button onClick={handleEditToggle} className="flex-1 bg-gray-400 text-white py-2 text-sm rounded-lg flex items-center justify-center hover:bg-gray-500">
+                            <X size={16} className="mr-1" /> Cancel
+                        </button>
+                    </>
+                ) : (
+                    <button onClick={handleEditToggle} className="w-full bg-[#FF6000] text-white py-2 text-sm rounded-lg flex items-center justify-center hover:bg-[#FFA559]">
+                        <Pencil size={16} className="mr-1" /> Edit Profile
+                    </button>
                 )}
-            </motion.div>
+            </div>
+
+            <button onClick={handleLogout} className="w-full mt-3 bg-red-500 text-white py-2 text-sm rounded-lg flex items-center justify-center hover:bg-red-600">
+                <LogOut size={16} className="mr-1" /> Logout
+            </button>
+        </motion.div>
+
+        {/* Rendelési előzmények */}
+        <motion.div
+        className="w-full md:w-2/3 bg-white shadow rounded-lg p-5"
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.7, ease: 'easeOut', delay: 0.2 }}
+      >
+        <h2 className="text-xl font-semibold text-gray-800 flex items-center">
+          <Package className="mr-2 text-[#FF6000]" size={20} /> Order History
+        </h2>
+
+        <div className="mmt-4 max-h-[400px] overflow-y-auto pr-2 space-y-3 scroll-smooth">
+          {orders.length === 0 ? (
+            <p className="text-gray-500 text-sm">No orders yet.</p>
+          ) : (
+            orders.map((order) => (
+              <div key={order.id} className="p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition flex justify-between items-center text-sm">
+                <div>
+                  <p className="font-medium">Order: {order.id.slice(0, 8).toUpperCase()}</p>
+                  <p className="text-gray-500">Total: ${order.final_total.toFixed(2)}</p>
+                </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-md ${
+                  order.status === 'completed'
+                    ? 'bg-green-200 text-green-700'
+                    : order.status === 'pending'
+                    ? 'bg-orange-200 text-orange-700'
+                    : 'bg-blue-200 text-blue-700'
+                }`}>
+                  {order.status.toUpperCase()}
+                </span>
+              </div>
+            ))
+          )}
         </div>
+      </motion.div>
+    </div>
+
     );
 }

@@ -8,7 +8,7 @@ export default async function applyPromo(req: NextApiRequest, res: NextApiRespon
 
     const { promo_code, user_id, cart_total } = req.body;
 
-    // Ellenőrizd, hogy a kupon létezik-e és megfelel-e a feltételeknek
+    // Ellenőrizzük, hogy a kupon létezik-e és érvényes-e
     const { data: promo, error } = await supabase
         .from('promo_codes')
         .select('*')
@@ -19,12 +19,12 @@ export default async function applyPromo(req: NextApiRequest, res: NextApiRespon
         return res.status(404).json({ message: 'Invalid promo code' });
     }
 
-    // Ha van minimum érték, ellenőrizzük
+    // Ha van minimális összeg követelmény, ellenőrizzük
     if (promo.minimum_amount && cart_total < promo.minimum_amount) {
         return res.status(400).json({ message: `Minimum ${promo.minimum_amount}$ is required for this promo.` });
     }
 
-    // Ellenőrizzük, hogy egyszer használatos kupon esetén már felhasználta-e
+    // Ha egyszer használatos a kupon, ellenőrizzük, hogy már felhasználta-e
     if (promo.single_use) {
         const { data: userPromo } = await supabase
             .from('user_promos')
@@ -39,9 +39,37 @@ export default async function applyPromo(req: NextApiRequest, res: NextApiRespon
         }
     }
 
-    // Minden feltétel teljesült, visszatérünk a kedvezmény értékével
+    // Kedvezmény számítása
+    const discount = (promo.discount_percentage / 100) * cart_total;
+    const new_total = cart_total - discount;
+
+    // 🔥 **Mentés a `user_cart` táblába**
+    const { data: existingCart } = await supabase
+        .from('user_cart')
+        .select('id')
+        .eq('user_id', user_id)
+        .single();
+
+    if (existingCart) {
+        // Ha van már kosár, frissítsük
+        await supabase
+            .from('user_cart')
+            .update({ subtotal: cart_total, discount, final_total: new_total, updated_at: new Date() })
+            .eq('user_id', user_id);
+    } else {
+        // Ha még nincs, hozzunk létre egy új bejegyzést
+        await supabase.from('user_cart').insert({
+            user_id,
+            subtotal: cart_total,
+            discount,
+            final_total: new_total,
+            updated_at: new Date(),
+        });
+    }
+
     return res.status(200).json({
-        discount: (promo.discount_percentage / 100) * cart_total,
-        new_total: cart_total - (promo.discount_percentage / 100) * cart_total,
+        discount,
+        new_total,
+        promo_code_id: promo.id,
     });
 }
