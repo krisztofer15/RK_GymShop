@@ -203,8 +203,7 @@ export default function Home() {
             </nav>
 
             {/* Ide irjuk ki hogy rendelkezik egy WELCOME10 kuponnal, amit egyszer használhat fel */}
-
-
+            
             {/* Kategóriasáv */}
             <div className="flex overflow-x-auto justify-center space-x-4 mt-6 px-4 py-2 rounded-lg">
                 <div

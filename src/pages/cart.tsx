@@ -25,6 +25,7 @@ type RecommendedProduct = {
   name: string;
   price: number;
   description: string;
+  image: string;
 };
 
 type SupabaseResponse<T> = {
@@ -39,6 +40,7 @@ export default function Cart() {
   >([]);
   const [promoCode, setPromoCode] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -88,7 +90,9 @@ export default function Cart() {
 
     const fetchRecommendedItems = async () => {
       const { data, error }: SupabaseResponse<RecommendedProduct[]> =
-        await supabase.from("products").select("id, name, price, description");
+        await supabase
+          .from("products")
+          .select("id, name, price, description, image");
 
       if (error) {
         console.error("Error fetching recommended items:", error);
@@ -218,10 +222,67 @@ export default function Cart() {
 
     if (response.ok) {
       setDiscount(result.discount);
+      setPromoCodeId(result.promo_code_id);
     } else {
       alert(result.message);
     }
   };
+
+  //******************************************* */
+  const handleProceedToCheckout = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) {
+      router.push("/login");
+      return;
+    }
+  
+    const user_id = userData.user.id;
+    const subtotal = calculateTotal();
+    const final_total = subtotal - discount;
+  
+    // Átalakítjuk a cartItems tömböt az API-hoz
+    const cart_items = cartItems.map((item) => ({
+      product_id: item.product.id,
+      quantity: item.quantity,
+      price: item.product.price,
+    }));
+  
+    try {
+      const response = await fetch("/api/orders/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id,
+          cart_items,
+          subtotal,
+          discount,
+          final_total,
+          promo_code_id: promoCodeId,
+        }),
+      });
+  
+      const result = await response.json();
+  
+      if (response.ok && result.order_id) {
+        localStorage.setItem("order_id", result.order_id);
+        router.push(`/shipping?order_id=${result.order_id}`);
+      } else {
+        alert("Hiba történt a rendelés létrehozásakor.");
+        console.error(result.message);
+      }
+    } catch (err) {
+      console.error("Hiba történt:", err);
+      alert("Szerverhiba történt. Próbáld újra.");
+    }
+  };
+  
+
+  const extendedItems =
+  recommendedItems.length < 10
+    ? Array(50).fill(recommendedItems).flat()
+    : recommendedItems;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -312,13 +373,18 @@ export default function Cart() {
                   type="text"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value)}
-                  className="w-full p-2 border rounded-lg"
+                  className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6000]"
                   placeholder="Enter your promo code"
                 />
               </div>
-
               <button
                 onClick={applyPromoCode}
+                className="w-20 py-2 bg-[#FF6000] text-white text-sm rounded-lg hover:bg-[#FFA559] transition"
+              >
+                Apply
+              </button>
+              <button
+                onClick={handleProceedToCheckout}
                 className="w-full py-3 bg-[#FF6000] text-white text-sm rounded-lg hover:bg-[#FFA559] transition"
               >
                 Proceed to Checkout
@@ -341,20 +407,27 @@ export default function Cart() {
                 1280: { slidesPerView: 4 }, // Nagyobb képernyőn max 4 kártya
               }}
               freeMode={true}
-              loop={true}
-              speed={4500} // Mozgás sebessége (minél nagyobb, annál lassabb)
+              loop={false}
+              speed={12000} // Mozgás sebessége (minél nagyobb, annál lassabb)
               autoplay={{
                 delay: 0, // Azonnal indul
                 disableOnInteraction: false,
               }}
-              
               allowTouchMove={false}
-              modules={[Autoplay]}
+              modules={[Autoplay, FreeMode]}
               className="w-full overflow-hidden"
             >
-              {recommendedItems.concat(recommendedItems).map((item, index) => (
+              {extendedItems.map((item, index) => (
                 <SwiperSlide key={index} className="!w-[220px] flex-shrink-0">
-                  <div className="p-4 bg-white shadow rounded-lg text-center min-w-[180px] max-w-[220px] min-h-[200px] flex flex-col justify-between">
+                  <div className="p-4 bg-white shadow rounded-lg text-center min-w-[180px] max-w-[220px] min-h-[300px] flex flex-col justify-between">
+                    {/* Kép */}
+                    <div className="w-full h-[120px] flex items-center justify-center mb-4 overflow-hidden">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="object-cover rounded-md max-h-full"
+                      />
+                    </div>
                     <h3 className="text-base font-semibold text-gray-800">
                       {item.name}
                     </h3>

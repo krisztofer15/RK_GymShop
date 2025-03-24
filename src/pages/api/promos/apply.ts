@@ -70,5 +70,6 @@ export default async function applyPromo(req: NextApiRequest, res: NextApiRespon
     return res.status(200).json({
         discount,
         new_total,
+        promo_code_id: promo.id,
     });
 }
