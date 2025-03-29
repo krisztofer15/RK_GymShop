@@ -33,7 +33,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Felhasználói adatok lekérése a `users` táblából
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('id, name, email, created')
+            .select(`
+                id,
+                name,
+                email,
+                created,
+                user_roles (
+                  role_id,
+                  roles (
+                    name
+                  )
+                )
+              `)
+              
             .eq('id', authData.user?.id)
             .single();
 
@@ -41,12 +53,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(404).json({ message: 'User data not found in the database' });
         }
 
+        const role = (userData.user_roles[0] as any)?.roles?.name || 'user';
+        // console.log('USERDATA:', JSON.stringify(userData, null, 2));
+
         // Sikeres bejelentkezés és session visszaadása
         res.status(200).json({
             message: 'Login successful',
-            user: userData,
-            session, // Session visszaadása
-        });
+            user: {
+              id: userData.id,
+              name: userData.name,
+              email: userData.email,
+              created: userData.created,
+              role,
+            },
+            session,
+          });          
     } catch (err: unknown) {
         if (err instanceof Error) {
             res.status(500).json({ message: 'Unexpected error', error: err.message });
