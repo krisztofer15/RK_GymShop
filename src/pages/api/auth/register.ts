@@ -37,6 +37,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(500).json({ message: 'Error registering user', error: authError.message });
         }
 
+        const userId = authData.user?.id;
+        if (!userId) {
+            return res.status(500).json({ message: 'User ID not found after registration' });
+        }
+
         // Felhasználó adatainak mentése a `users` táblába
         const { error: insertError } = await supabase.from('users').insert([
             {
@@ -48,6 +53,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (insertError) {
             return res.status(500).json({ message: 'Error saving user data', error: insertError.message });
+        }
+
+        // 'user' szerepkör lekérése a roles táblából
+        const { data: roleData, error: roleError } = await supabase
+            .from('roles')
+            .select('id')
+            .eq('name', 'user')
+            .single();
+
+        if (roleError || !roleData) {
+            return res.status(500).json({message: 'Error finding default role', error: roleError?.message})
+        }
+
+        // Kapcsolat mentése user_roles táblába
+        const { error: userRoleError } = await supabase.from('user_roles').insert([
+            {
+                user_id: userId,
+                role_id: roleData.id,
+            },
+        ]);
+        if (userRoleError) {
+            return res.status(500).json({ message: 'Error assigning role to user', error: userRoleError.message });
         }
 
         // Sikeres regisztráció és session visszaadása
