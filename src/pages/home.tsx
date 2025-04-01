@@ -354,16 +354,17 @@ export default function Home() {
         ))}
       </div>
 
+      <main className="flex-grow">
       {/* Termékek */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8 px-4">
         {loading ? (
-          <p className="text-center col-span-3 text-sm font-medium text-gray-500">
-            Loading...
-          </p>
+          <div className="col-span-3 h-[300px] flex items-center justify-center">
+          <p className="text-sm font-medium text-gray-500">Loading...</p>
+          </div>
         ) : filteredProducts.length === 0 ? (
-          <p className="text-center col-span-3 text-sm font-medium text-gray-500">
-            Nincsenek találatok.
-          </p>
+          <div className="col-span-3 h-[300px] flex items-center justify-center">
+    <p className="text-sm font-medium text-gray-500">Nincsenek találatok.</p>
+  </div>
         ) : (
           filteredProducts.map((product) => (
             <div
@@ -400,6 +401,7 @@ export default function Home() {
           ))
         )}
       </div>
+      </main>
       {/* Footer */}
       <footer className="mt-20 bg-gray-100 text-gray-700 w-full">
         <div className="container mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
