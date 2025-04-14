@@ -27,7 +27,7 @@ type Product = {
   name: string;
   price: number;
   description: string;
-  rating: number;
+  rating: number | null;
   category_id: string;
   image: string;
 };
@@ -154,9 +154,9 @@ export default function Home() {
     router.push("/profile");
   };
 
-  // const handleProductClick = (productId: string) => {
-  //     router.push(`/product/${productId}`);
-  // };
+  const handleProductClick = (productId: string) => {
+    router.push(`/product/${productId}`);
+  };
 
   const getCategoryIcon = (categoryName: string) => {
     switch (categoryName) {
@@ -356,47 +356,89 @@ export default function Home() {
 
       <main className="flex-grow">
       {/* Termékek */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8 px-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mt-6 px-4">
         {loading ? (
-          <div className="col-span-3 h-[300px] flex items-center justify-center">
-          <p className="text-sm font-medium text-gray-500">Loading...</p>
+          <div className="col-span-full h-[200px] flex items-center justify-center">
+            <div className="flex flex-col items-center">
+              <div className="w-8 h-8 border-3 border-[#FF6000] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs font-medium text-gray-500 mt-2">Betöltés...</p>
+            </div>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="col-span-3 h-[300px] flex items-center justify-center">
-    <p className="text-sm font-medium text-gray-500">Nincsenek találatok.</p>
-  </div>
+          <div className="col-span-full h-[200px] flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm font-medium text-gray-500">Nincsenek találatok</p>
+              <p className="text-xs text-gray-400 mt-1">Próbálj más keresési feltételt</p>
+            </div>
+          </div>
         ) : (
           filteredProducts.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-xl p-4 shadow-lg transition-transform hover:scale-105 hover:shadow-xl cursor-pointer flex items-center"
-              style={{ height: "200px" }}
+              className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 flex flex-col cursor-pointer"
+              onClick={() => handleProductClick(product.id)}
             >
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-[#1D1617] mb-2">
+              <div className="relative h-32 overflow-hidden bg-gray-50">
+                <Image
+                  src={product.image}
+                  fill
+                  style={{ objectFit: 'contain' }}
+                  alt={product.name}
+                  className="p-1 transition-transform duration-200 group-hover:scale-105"
+                  priority
+                />
+                <div className="absolute top-1 right-1 bg-[#FF6000] text-white text-[10px] font-medium px-1.5 py-0.5 rounded-sm">
+                  ${product.price.toFixed(2)}
+                </div>
+              </div>
+              
+              <div className="p-2 flex-1 flex flex-col">
+                <h2 className="text-sm font-medium text-gray-800 line-clamp-1 mb-0.5">
                   {product.name}
                 </h2>
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2">
+                
+                <div className="flex items-center mb-1">
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <svg 
+                        key={i} 
+                        className={`w-3 h-3 ${i < Math.round(product.rating || 0) ? 'text-yellow-400' : 'text-gray-200'}`} 
+                        fill="currentColor" 
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-gray-400 ml-1">({product.rating ? product.rating.toFixed(1) : '0.0'})</span>
+                </div>
+                
+                <p className="text-xs text-gray-500 line-clamp-2 mb-2 flex-1">
                   {product.description}
                 </p>
-                <p className="text-xl font-bold text-[#FF6000] mb-1">
-                  ${product.price.toFixed(2)}
-                </p>
-                <button
-                  className="mt-2 bg-[#FF6000] text-white text-sm py-1 px-3 rounded-md hover:bg-[#FFA559] transition"
-                  onClick={() => handleAddToCart(product.id)}
-                >
-                  Add to Cart
-                </button>
+                
+                <div className="flex items-center justify-between mt-auto">
+                  <button
+                    className="bg-white text-[#FF6000] border border-[#FF6000] hover:bg-[#FF6000] hover:text-white text-xs py-1 px-2 rounded transition-colors duration-200 flex items-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCart(product.id);
+                    }}
+                  >
+                    <ShoppingCart size={12} className="mr-1" />
+                    Kosárba
+                  </button>
+                  
+                  <button 
+                    onClick={() => handleProductClick(product.id)}
+                    className="text-gray-300 hover:text-[#FF6000] transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <Image
-                src={product.image}
-                width={120}
-                height={120}
-                alt={product.name}
-                className="rounded-lg"
-                priority
-              />
             </div>
           ))
         )}
@@ -486,7 +528,7 @@ export default function Home() {
 
         {/* COPYRIGHT */}
         <div className="bg-white py-4 text-center text-xs text-gray-400 border-t">
-          © {new Date().getFullYear()} RK_GymShop. Minden jog fenntartva.
+          {new Date().getFullYear()} RK_GymShop. Minden jog fenntartva.
         </div>
       </footer>
     </ScreenWrapper>

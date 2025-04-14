@@ -70,7 +70,7 @@ export default function Profile() {
             }
           };
       
-          fetchUserAndOrders();      
+          fetchUserAndOrders();
     }, [router]);
 
     const handleUpdateProfile = async () => {

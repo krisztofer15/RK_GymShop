@@ -105,7 +105,7 @@ export default function Shipping() {
       newErrors.address = "Address must be at least 5 characters.";
     }
 
-    if (!/^[a-zA-Z\s]{2,}$/.test(city)) {
+    if (!/^[\p{L}\s]{2,}$/u.test(city)) {
       newErrors.city =
         "City must contain only letters and be at least 2 characters.";
     }

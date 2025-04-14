@@ -106,7 +106,7 @@ export default function AdminDashboard() {
   const paginatedProducts = productList.slice(startIndex, endIndex);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50">
       {/* SIDEBAR */}
       <Sidebar
         collapsed={collapsed}
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
       />
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 p-8 overflow-y-auto min-h-screen">
+      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto min-h-screen mt-6 lg:mt-0" id="main-content">
         <h1 className="text-2xl font-bold text-[#FF6000] mb-6">
           Admin Dashboard
         </h1>
