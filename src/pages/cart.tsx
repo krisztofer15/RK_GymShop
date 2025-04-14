@@ -8,6 +8,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/autoplay";
 import { FreeMode, Autoplay } from "swiper/modules";
+import InfoModal from "./components/InfoModal";
 
 type CartItem = {
   id: string;
@@ -42,6 +43,12 @@ export default function Cart() {
   const [discount, setDiscount] = useState(0);
   const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [infoModal, setInfoModal] = useState({
+    isOpen: false,
+    message: "",
+    title: ""
+  });
   const router = useRouter();
 
   const fetchCartItems = useCallback(async () => {
@@ -53,6 +60,9 @@ export default function Cart() {
       router.push("/login");
       return;
     }
+
+    // Beállítjuk a userId-t
+    setUserId(userData.user.id);
 
     const { data, error } = await supabase
       .from("cart_items")
@@ -106,6 +116,13 @@ export default function Cart() {
 
   const handleAddToCart = async (product: RecommendedProduct) => {
     try {
+      // Ellenőrizzük, hogy van-e bejelentkezett felhasználó
+      if (!userId) {
+        console.error("No user logged in");
+        router.push("/login");
+        return;
+      }
+
       const existingItem = cartItems.find(
         (item) => item.product.id === product.id
       );
@@ -121,6 +138,7 @@ export default function Cart() {
           .insert({
             product_id: product.id,
             quantity: 1,
+            user_id: userId  // Hozzáadjuk a user_id mezőt
           })
           .select("id");
 
@@ -202,7 +220,11 @@ export default function Cart() {
     const { data: userData } = await supabase.auth.getUser();
 
     if (!userData?.user) {
-      alert("You must be logged in to apply a promo code.");
+      setInfoModal({
+        isOpen: true,
+        message: "Be kell jelentkezned a kuponkód alkalmazásához.",
+        title: "Figyelmeztetés"
+      });
       return;
     }
 
@@ -224,7 +246,11 @@ export default function Cart() {
       setDiscount(result.discount);
       setPromoCodeId(result.promo_code_id);
     } else {
-      alert(result.message);
+      setInfoModal({
+        isOpen: true,
+        message: result.message,
+        title: "Hiba"
+      });
     }
   };
 
@@ -419,28 +445,32 @@ export default function Cart() {
             >
               {extendedItems.map((item, index) => (
                 <SwiperSlide key={index} className="!w-[220px] flex-shrink-0">
-                  <div className="p-4 bg-white shadow rounded-lg text-center min-w-[180px] max-w-[220px] min-h-[300px] flex flex-col justify-between">
+                  <div className="p-4 bg-white shadow rounded-lg text-center min-w-[180px] max-w-[220px] h-[300px] flex flex-col">
                     {/* Kép */}
-                    <div className="w-full h-[120px] flex items-center justify-center mb-4 overflow-hidden">
+                    <div className="w-full h-[120px] flex items-center justify-center mb-2 overflow-hidden">
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="object-cover rounded-md max-h-full"
+                        className="object-contain rounded-md max-h-full max-w-full"
                       />
                     </div>
-                    <h3 className="text-base font-semibold text-gray-800">
+                    <h3 className="text-base font-semibold text-gray-800 mb-1 line-clamp-1">
                       {item.name}
                     </h3>
-                    <p className="text-sm text-gray-500">{item.description}</p>
-                    <p className="text-sm text-[#FF6000]">
+                    <p className="text-sm text-gray-500 line-clamp-2 h-10 overflow-hidden mb-2">
+                      {item.description}
+                    </p>
+                    <p className="text-sm text-[#FF6000] mb-2">
                       ${item.price.toFixed(2)}
                     </p>
-                    <button
-                      onClick={() => handleAddToCart(item)}
-                      className="mt-2 px-4 py-2 bg-[#FF6000] text-white text-xs rounded-lg hover:bg-[#FFA559] transition"
-                    >
-                      Add to Cart
-                    </button>
+                    <div className="mt-auto">
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        className="w-full px-4 py-2 bg-[#FF6000] text-white text-xs rounded-lg hover:bg-[#FFA559] transition"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
                   </div>
                 </SwiperSlide>
               ))}
@@ -448,6 +478,14 @@ export default function Cart() {
           </div>
         </>
       )}
+      
+      {/* Info Modal */}
+      <InfoModal 
+        isOpen={infoModal.isOpen}
+        message={infoModal.message}
+        title={infoModal.title}
+        onClose={() => setInfoModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
