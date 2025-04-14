@@ -72,6 +72,7 @@ npm run dev
 - Kedvencek lista
 - Bővített termékszűrési lehetőségek
 - Email értesítések
+- Elfelejtett jelszó
 
 ## Licenc
 
